@@ -48,9 +48,18 @@
 
         .input-form {
             display: grid;
+            /* 调整网格布局，适配详情输入项：任务名称占比加大，详情独占一行 */
+            grid-template-areas:
+                "name start end priority status btn"
+                "desc desc desc desc desc desc";
             grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto;
             gap: 16px;
             align-items: end;
+        }
+
+        /* 任务详情独占一行 */
+        .form-group.desc-group {
+            grid-area: desc;
         }
 
         .form-group {
@@ -66,7 +75,8 @@
         }
 
         .form-group input,
-        .form-group select {
+        .form-group select,
+        .form-group textarea { /* 新增textarea样式 */
             padding: 10px 12px;
             border: 1px solid #dce4ec;
             border-radius: 4px;
@@ -75,8 +85,15 @@
             transition: border-color 0.2s;
         }
 
+        .form-group textarea { /* 单独设置文本域样式 */
+            resize: vertical; /* 仅允许垂直拉伸 */
+            min-height: 80px; /* 最小高度 */
+            line-height: 1.5; /* 行高，优化阅读 */
+        }
+
         .form-group input:focus,
-        .form-group select:focus {
+        .form-group select:focus,
+        .form-group textarea:focus { /* 新增textarea聚焦样式 */
             border-color: #3498db;
         }
 
@@ -90,6 +107,8 @@
             font-size: 14px;
             font-weight: 500;
             transition: background-color 0.2s;
+            /* 让按钮垂直对齐到底部 */
+            align-self: end;
         }
 
         .add-btn:hover {
@@ -144,6 +163,9 @@
             border-bottom: 1px solid #eef1f5;
             color: #2c3e50;
             vertical-align: middle;
+            /* 详情单元格自动换行 */
+            word-wrap: break-word;
+            word-break: break-all;
         }
 
         .task-table tr:hover {
@@ -223,12 +245,12 @@
             <span id="current-date"></span>
         </div>
 
-        <!-- 任务录入区域 -->
+        <!-- 任务录入区域 - 新增任务详情 -->
         <div class="task-input-section">
             <form class="input-form" id="taskForm">
                 <div class="form-group">
                     <label for="taskName">任务名称</label>
-                    <input type="text" id="taskName" placeholder="例如：完成接口开发、修复Bug" required>
+                    <input type="text" id="taskName" placeholder="任务标题" required>
                 </div>
                 <div class="form-group">
                     <label for="startDate">开始日期</label>
@@ -255,10 +277,15 @@
                     </select>
                 </div>
                 <button type="submit" class="add-btn">添加任务</button>
+                <!-- 新增：任务详情文本域 -->
+                <div class="form-group desc-group">
+                    <label for="taskDesc">任务详情</label>
+                    <textarea id="taskDesc" placeholder="输入任务详情"></textarea>
+                </div>
             </form>
         </div>
 
-        <!-- 任务列表区域 -->
+        <!-- 任务列表区域 - 新增详情列 -->
         <div class="task-list-section">
             <div class="task-filter">
                 <button class="filter-btn active" data-filter="all">全部任务</button>
@@ -271,6 +298,7 @@
                 <thead>
                     <tr>
                         <th>任务名称</th>
+                        <th>任务详情</th> <!-- 新增：详情表头 -->
                         <th>开始日期</th>
                         <th>结束日期</th>
                         <th>优先级</th>
@@ -325,12 +353,13 @@
             });
         };
 
-        // 任务表单提交事件
+        // 任务表单提交事件 - 新增获取任务详情
         document.getElementById('taskForm').addEventListener('submit', function(e) {
             e.preventDefault(); // 阻止表单默认提交
 
-            // 获取表单值
+            // 获取表单值 - 新增taskDesc
             const taskName = document.getElementById('taskName').value.trim();
+            const taskDesc = document.getElementById('taskDesc').value.trim(); // 新增：获取详情
             const startDate = document.getElementById('startDate').value;
             const endDate = document.getElementById('endDate').value;
             const priority = document.getElementById('priority').value;
@@ -342,10 +371,11 @@
                 return;
             }
 
-            // 创建任务对象
+            // 创建任务对象 - 新增taskDesc属性
             const task = {
                 id: Date.now().toString(), // 用时间戳作为唯一ID
                 taskName,
+                taskDesc, // 新增：存储详情
                 startDate,
                 endDate,
                 priority,
@@ -366,7 +396,7 @@
             document.getElementById('startDate').value = `${year}-${month}-${day}`;
         });
 
-        // 添加任务到页面
+        // 添加任务到页面 - 新增渲染任务详情
         function addTask(task) {
             const tableBody = document.getElementById('taskTableBody');
             const emptyTip = document.getElementById('emptyTip');
@@ -390,9 +420,10 @@
                     break;
             }
 
-            // 拼接单元格内容（移除onclick，添加data-task-id）
+            // 拼接单元格内容 - 新增任务详情列
             tr.innerHTML = `
                 <td>${task.taskName}</td>
+                <td>${task.taskDesc || '无详情描述'}</td> <!-- 新增：渲染详情，无内容时显示默认文本 -->
                 <td>${task.startDate}</td>
                 <td>${task.endDate}</td>
                 <td>${task.priority}</td>
@@ -412,7 +443,7 @@
             emptyTip.style.display = 'none';
         }
 
-        // 保存任务到本地存储
+        // 保存任务到本地存储 - 自动包含taskDesc（无需额外修改，因为遍历行时会读取详情单元格）
         function saveTasks() {
             const tableBody = document.getElementById('taskTableBody');
             const rows = tableBody.querySelectorAll('tr');
@@ -422,9 +453,10 @@
                 const task = {
                     id: row.dataset.id,
                     taskName: row.cells[0].textContent,
-                    startDate: row.cells[1].textContent,
-                    endDate: row.cells[2].textContent,
-                    priority: row.cells[3].textContent,
+                    taskDesc: row.cells[1].textContent, // 新增：读取详情内容
+                    startDate: row.cells[2].textContent,
+                    endDate: row.cells[3].textContent,
+                    priority: row.cells[4].textContent,
                     status: row.dataset.status
                 };
                 tasks.push(task);
@@ -433,7 +465,7 @@
             localStorage.setItem('programmerTasks', JSON.stringify(tasks));
         }
 
-        // 从本地存储加载任务
+        // 从本地存储加载任务 - 无需额外修改，addTask已支持渲染详情
         function loadTasks() {
             const tasks = JSON.parse(localStorage.getItem('programmerTasks')) || [];
             const tableBody = document.getElementById('taskTableBody');
@@ -454,7 +486,7 @@
             });
         }
 
-        // 删除任务
+        // 删除任务 - 无需修改
         function deleteTask(taskId) {
             if (!confirm('确定要删除这个任务吗？删除后不可恢复！')) {
                 return;
@@ -473,7 +505,7 @@
             }
         }
 
-        // 更新任务状态
+        // 更新任务状态 - 无需修改
         function updateTaskStatus(taskId, targetStatus) {
             const tableBody = document.getElementById('taskTableBody');
             const row = tableBody.querySelector(`tr[data-id="${taskId}"]`);
@@ -514,7 +546,7 @@
             }
         }
 
-        // 绑定筛选按钮事件
+        // 绑定筛选按钮事件 - 无需修改
         function bindFilterEvents() {
             const filterBtns = document.querySelectorAll('.filter-btn');
             filterBtns.forEach(btn => {
@@ -530,7 +562,7 @@
             });
         }
 
-        // 筛选任务
+        // 筛选任务 - 无需修改
         function filterTasks(filterType) {
             const tableBody = document.getElementById('taskTableBody');
             const rows = tableBody.querySelectorAll('tr');
