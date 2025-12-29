@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>程序员任务排期表</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", "Consolas", "Monaco", monospace;
+        }
+
+        body {
+            background-color: #f5f7fa;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+
+        .header {
+            background-color: #2c3e50;
+            color: #fff;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 22px;
+            font-weight: 600;
+        }
+
+        .task-input-section {
+            padding: 24px;
+            border-bottom: 1px solid #eef1f5;
+        }
+
+        .input-form {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto;
+            gap: 16px;
+            align-items: end;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group label {
+            font-size: 14px;
+            color: #34495e;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select {
+            padding: 10px 12px;
+            border: 1px solid #dce4ec;
+            border-radius: 4px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: #3498db;
+        }
+
+        .add-btn {
+            padding: 10px 24px;
+            background-color: #3498db;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .add-btn:hover {
+            background-color: #2980b9;
+        }
+
+        .task-list-section {
+            padding: 24px;
+        }
+
+        .task-filter {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 6px 16px;
+            border: 1px solid #dce4ec;
+            border-radius: 20px;
+            background-color: #fff;
+            color: #34495e;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .filter-btn.active {
+            background-color: #2c3e50;
+            color: #fff;
+            border-color: #2c3e50;
+        }
+
+        .task-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        .task-table th {
+            background-color: #f8f9fa;
+            color: #34495e;
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #eef1f5;
+        }
+
+        .task-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #eef1f5;
+            color: #2c3e50;
+            vertical-align: middle;
+        }
+
+        .task-table tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .status-tag {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-todo {
+            background-color: #ffeaa7;
+            color: #d35400;
+        }
+
+        .status-doing {
+            background-color: #81ecec;
+            color: #0984e3;
+        }
+
+        .status-done {
+            background-color: #a8e6cf;
+            color: #27ae60;
+        }
+
+        .operate-btn {
+            border: none;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-right: 6px;
+            transition: background-color 0.2s;
+        }
+
+        .delete-btn {
+            background-color: #ff7675;
+            color: #fff;
+        }
+
+        .delete-btn:hover {
+            background-color: #d63031;
+        }
+
+        .finish-btn {
+            background-color: #74b9ff;
+            color: #fff;
+        }
+
+        .finish-btn:hover {
+            background-color: #0984e3;
+        }
+
+        /* 空状态样式 */
+        .empty-tip {
+            text-align: center;
+            padding: 60px 0;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        .empty-tip i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            color: #bdc3c7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>程序员任务排期表</h1>
+            <span id="current-date"></span>
+        </div>
+
+        <!-- 任务录入区域 -->
+        <div class="task-input-section">
+            <form class="input-form" id="taskForm">
+                <div class="form-group">
+                    <label for="taskName">任务名称</label>
+                    <input type="text" id="taskName" placeholder="例如：完成接口开发、修复Bug" required>
+                </div>
+                <div class="form-group">
+                    <label for="startDate">开始日期</label>
+                    <input type="date" id="startDate" required>
+                </div>
+                <div class="form-group">
+                    <label for="endDate">结束日期</label>
+                    <input type="date" id="endDate" required>
+                </div>
+                <div class="form-group">
+                    <label for="priority">优先级</label>
+                    <select id="priority" required>
+                        <option value="高">高</option>
+                        <option value="中" selected>中</option>
+                        <option value="低">低</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="status">初始状态</label>
+                    <select id="status" required>
+                        <option value="待执行" selected>待执行</option>
+                        <option value="执行中">执行中</option>
+                        <option value="已完成">已完成</option>
+                    </select>
+                </div>
+                <button type="submit" class="add-btn">添加任务</button>
+            </form>
+        </div>
+
+        <!-- 任务列表区域 -->
+        <div class="task-list-section">
+            <div class="task-filter">
+                <button class="filter-btn active" data-filter="all">全部任务</button>
+                <button class="filter-btn" data-filter="待执行">待执行</button>
+                <button class="filter-btn" data-filter="执行中">执行中</button>
+                <button class="filter-btn" data-filter="已完成">已完成</button>
+            </div>
+
+            <table class="task-table" id="taskTable">
+                <thead>
+                    <tr>
+                        <th>任务名称</th>
+                        <th>开始日期</th>
+                        <th>结束日期</th>
+                        <th>优先级</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="taskTableBody">
+                    <!-- 任务数据将通过JS动态插入 -->
+                </tbody>
+            </table>
+
+            <!-- 空状态提示 -->
+            <div class="empty-tip" id="emptyTip" style="display: none;">
+                <div>📋</div>
+                <p>暂无任务，赶紧添加你的第一个任务吧！</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 初始化当前日期 + 绑定事件委托
+        window.onload = function() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            document.getElementById('current-date').textContent = `${year}-${month}-${day}`;
+            
+            // 默认设置开始日期为今天
+            document.getElementById('startDate').value = `${year}-${month}-${day}`;
+            
+            // 从本地存储加载任务
+            loadTasks();
+            
+            // 绑定筛选按钮事件
+            bindFilterEvents();
+
+            // 新增：事件委托 - 解决删除/完成按钮无效问题
+            const taskTableBody = document.getElementById('taskTableBody');
+            taskTableBody.addEventListener('click', function(e) {
+                const targetBtn = e.target;
+                const taskId = targetBtn.dataset.taskId;
+                if (!taskId) return; // 非按钮元素，直接返回
+
+                // 判断点击的是完成按钮还是删除按钮
+                if (targetBtn.classList.contains('finish-btn')) {
+                    updateTaskStatus(taskId, '已完成');
+                } else if (targetBtn.classList.contains('delete-btn')) {
+                    deleteTask(taskId);
+                }
+            });
+        };
+
+        // 任务表单提交事件
+        document.getElementById('taskForm').addEventListener('submit', function(e) {
+            e.preventDefault(); // 阻止表单默认提交
+
+            // 获取表单值
+            const taskName = document.getElementById('taskName').value.trim();
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const priority = document.getElementById('priority').value;
+            const status = document.getElementById('status').value;
+
+            // 简单校验日期
+            if (new Date(startDate) > new Date(endDate)) {
+                alert('结束日期不能早于开始日期！');
+                return;
+            }
+
+            // 创建任务对象
+            const task = {
+                id: Date.now().toString(), // 用时间戳作为唯一ID
+                taskName,
+                startDate,
+                endDate,
+                priority,
+                status
+            };
+
+            // 添加任务并保存
+            addTask(task);
+            saveTasks();
+
+            // 重置表单
+            this.reset();
+            // 重置后默认开始日期为今天
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            document.getElementById('startDate').value = `${year}-${month}-${day}`;
+        });
+
+        // 添加任务到页面
+        function addTask(task) {
+            const tableBody = document.getElementById('taskTableBody');
+            const emptyTip = document.getElementById('emptyTip');
+
+            // 创建行
+            const tr = document.createElement('tr');
+            tr.dataset.id = task.id;
+            tr.dataset.status = task.status;
+
+            // 状态标签样式映射
+            let statusClass = '';
+            switch (task.status) {
+                case '待执行':
+                    statusClass = 'status-todo';
+                    break;
+                case '执行中':
+                    statusClass = 'status-doing';
+                    break;
+                case '已完成':
+                    statusClass = 'status-done';
+                    break;
+            }
+
+            // 拼接单元格内容（移除onclick，添加data-task-id）
+            tr.innerHTML = `
+                <td>${task.taskName}</td>
+                <td>${task.startDate}</td>
+                <td>${task.endDate}</td>
+                <td>${task.priority}</td>
+                <td><span class="status-tag ${statusClass}">${task.status}</span></td>
+                <td>
+                    <button class="operate-btn finish-btn" data-task-id="${task.id}">
+                        ${task.status === '已完成' ? '重置' : '完成'}
+                    </button>
+                    <button class="operate-btn delete-btn" data-task-id="${task.id}">删除</button>
+                </td>
+            `;
+
+            // 添加到表格
+            tableBody.appendChild(tr);
+
+            // 隐藏空状态提示
+            emptyTip.style.display = 'none';
+        }
+
+        // 保存任务到本地存储
+        function saveTasks() {
+            const tableBody = document.getElementById('taskTableBody');
+            const rows = tableBody.querySelectorAll('tr');
+            const tasks = [];
+
+            rows.forEach(row => {
+                const task = {
+                    id: row.dataset.id,
+                    taskName: row.cells[0].textContent,
+                    startDate: row.cells[1].textContent,
+                    endDate: row.cells[2].textContent,
+                    priority: row.cells[3].textContent,
+                    status: row.dataset.status
+                };
+                tasks.push(task);
+            });
+
+            localStorage.setItem('programmerTasks', JSON.stringify(tasks));
+        }
+
+        // 从本地存储加载任务
+        function loadTasks() {
+            const tasks = JSON.parse(localStorage.getItem('programmerTasks')) || [];
+            const tableBody = document.getElementById('taskTableBody');
+            const emptyTip = document.getElementById('emptyTip');
+
+            // 清空表格
+            tableBody.innerHTML = '';
+
+            // 如果没有任务，显示空状态
+            if (tasks.length === 0) {
+                emptyTip.style.display = 'block';
+                return;
+            }
+
+            // 遍历添加任务
+            tasks.forEach(task => {
+                addTask(task);
+            });
+        }
+
+        // 删除任务
+        function deleteTask(taskId) {
+            if (!confirm('确定要删除这个任务吗？删除后不可恢复！')) {
+                return;
+            }
+
+            const tableBody = document.getElementById('taskTableBody');
+            const row = tableBody.querySelector(`tr[data-id="${taskId}"]`);
+            if (row) {
+                row.remove();
+                saveTasks(); // 保存最新任务列表
+                // 检查是否还有任务
+                const rows = tableBody.querySelectorAll('tr');
+                if (rows.length === 0) {
+                    document.getElementById('emptyTip').style.display = 'block';
+                }
+            }
+        }
+
+        // 更新任务状态
+        function updateTaskStatus(taskId, targetStatus) {
+            const tableBody = document.getElementById('taskTableBody');
+            const row = tableBody.querySelector(`tr[data-id="${taskId}"]`);
+            if (!row) return;
+
+            const currentStatus = row.dataset.status;
+            // 切换状态（如果已是已完成，点击重置为待执行）
+            const newStatus = currentStatus === '已完成' ? '待执行' : targetStatus;
+            row.dataset.status = newStatus;
+
+            // 更新状态标签样式和文本
+            const statusTag = row.querySelector('.status-tag');
+            statusTag.textContent = newStatus;
+            statusTag.className = 'status-tag';
+            switch (newStatus) {
+                case '待执行':
+                    statusTag.classList.add('status-todo');
+                    break;
+                case '执行中':
+                    statusTag.classList.add('status-doing');
+                    break;
+                case '已完成':
+                    statusTag.classList.add('status-done');
+                    break;
+            }
+
+            // 更新完成按钮文本
+            const finishBtn = row.querySelector('.finish-btn');
+            finishBtn.textContent = newStatus === '已完成' ? '重置' : '完成';
+
+            // 保存任务
+            saveTasks();
+
+            // 刷新筛选状态（如果当前有筛选条件）
+            const activeFilter = document.querySelector('.filter-btn.active').dataset.filter;
+            if (activeFilter !== 'all') {
+                filterTasks(activeFilter);
+            }
+        }
+
+        // 绑定筛选按钮事件
+        function bindFilterEvents() {
+            const filterBtns = document.querySelectorAll('.filter-btn');
+            filterBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    // 移除所有激活状态
+                    filterBtns.forEach(b => b.classList.remove('active'));
+                    // 添加当前激活状态
+                    this.classList.add('active');
+                    // 获取筛选条件并筛选
+                    const filter = this.dataset.filter;
+                    filterTasks(filter);
+                });
+            });
+        }
+
+        // 筛选任务
+        function filterTasks(filterType) {
+            const tableBody = document.getElementById('taskTableBody');
+            const rows = tableBody.querySelectorAll('tr');
+            const emptyTip = document.getElementById('emptyTip');
+            let visibleCount = 0;
+
+            rows.forEach(row => {
+                if (filterType === 'all' || row.dataset.status === filterType) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            // 显示/隐藏空状态
+            emptyTip.style.display = visibleCount === 0 ? 'block' : 'none';
+        }
+    </script>
+</body>
+</html>
